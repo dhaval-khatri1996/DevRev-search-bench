@@ -44,6 +44,21 @@ from FlagEmbedding import BGEM3FlagModel   # pip install FlagEmbedding
 from FlagEmbedding import FlagReranker
 from tqdm import tqdm
 
+# ── GPU/CUDA support ─────────────────────────────────────────────────────────
+try:
+    import torch
+    HAS_TORCH = True
+    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    if DEVICE == "cuda":
+        print(f"✓ CUDA available: {torch.cuda.get_device_name(0)}")
+        print(f"  Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f}GB")
+    else:
+        print("⚠ CUDA not available, running on CPU")
+except ImportError:
+    HAS_TORCH = False
+    DEVICE = "cpu"
+    print("⚠ torch not installed, running on CPU")
+
 try:
     import optuna
     optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -493,8 +508,19 @@ class BareMetalSearch:
     def _load_models(self) -> None:
         print("Loading BGE-M3 (use_fp16 halves memory, negligible quality loss)...")
         self.bge      = BGEM3FlagModel(BGE_M3_MODEL, use_fp16=True)
+        
+        # Move to GPU if available
+        if DEVICE == "cuda" and HAS_TORCH:
+            print(f"  Moving BGE-M3 to {DEVICE}...")
+            self.bge.model.to(DEVICE)
+        
         print("Loading reranker...")
         self.reranker = FlagReranker(RERANK_MODEL, use_fp16=True)
+        
+        # Move reranker to GPU if available
+        if DEVICE == "cuda" and HAS_TORCH:
+            print(f"  Moving reranker to {DEVICE}...")
+            self.reranker.model.to(DEVICE)
 
     # ── indexes ───────────────────────────────────────────────────────────────
 

@@ -33,6 +33,21 @@ from sentence_transformers import (   # pip install sentence-transformers
 )
 from tqdm import tqdm                 # pip install tqdm
 
+# ── GPU/CUDA support ─────────────────────────────────────────────────────────
+try:
+    import torch
+    HAS_TORCH = True
+    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    if DEVICE == "cuda":
+        print(f"✓ CUDA available: {torch.cuda.get_device_name(0)}")
+        print(f"  Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f}GB")
+    else:
+        print("⚠ CUDA not available, running on CPU")
+except ImportError:
+    HAS_TORCH = False
+    DEVICE = "cpu"
+    print("⚠ torch not installed, running on CPU")
+
 # optional — only needed for weight tuning
 try:
     import optuna
@@ -280,6 +295,12 @@ class BareMetalSearch:
         """Encode all documents with MiniLM and cache to disk."""
         # load model temporarily just for encoding
         encoder = SentenceTransformer(EMBED_MODEL)
+        
+        # Move to GPU if available
+        if DEVICE == "cuda" and HAS_TORCH:
+            print(f"  Moving MiniLM encoder to {DEVICE}...")
+            encoder.to(DEVICE)
+        
         self.embeddings = encoder.encode(
             self.documents,
             batch_size=64,
@@ -304,7 +325,19 @@ class BareMetalSearch:
     def _load_models(self) -> None:
         print("Loading models...")
         self.encoder  = SentenceTransformer(EMBED_MODEL)
+        
+        # Move encoder to GPU if available
+        if DEVICE == "cuda" and HAS_TORCH:
+            print(f"  Moving MiniLM encoder to {DEVICE}...")
+            self.encoder.to(DEVICE)
+        
         self.reranker = CrossEncoder(RERANK_MODEL)
+        
+        # Move reranker to GPU if available
+        if DEVICE == "cuda" and HAS_TORCH:
+            print(f"  Moving CrossEncoder to {DEVICE}...")
+            self.reranker.to(DEVICE)
+        
         print("Models loaded.")
 
     # ── search ────────────────────────────────────────────────────────────────
