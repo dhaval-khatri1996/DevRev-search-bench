@@ -1,0 +1,13 @@
+# Bare Metal DevRev Search Pipeline — dependencies
+# All lightweight, CPU-friendly, no API keys needed
+
+rank-bm25>=0.2.2
+sentence-transformers>=2.7.0
+spacy>=3.7.0
+numpy>=1.24.0
+tqdm>=4.66.0
+datasets>=2.18.0          # only for loading from HuggingFace
+optuna>=3.6.0             # optional — only needed for --tune flag
+
+# After installing spacy, also run:
+# python -m spacy download en_core_web_sm
